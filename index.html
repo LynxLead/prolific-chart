@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Prolific Chart</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.3/Chart.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+
+    <script src="app.js"></script>
+    <link rel="stylesheet" type="text/css" href="style.css" />
+    <link rel="icon" href="favicon.ico" type="image/x-icon"/>
+
+  </head>
+
+  <style>
+    .centri {
+      display: grid;
+      place-content: center;
+    }
+
+    .container {
+      margin-top: 5vh;
+      width: 100vh;
+    }
+
+    .light {
+      right: 0;
+    pointer-events: none;
+    height: 180vh;
+    mix-blend-mode: hard-light;
+    background: radial-gradient(50% 50% at 50% 50%,rgba(255, 0, 0, 0.219) 0,hsla(0,0%,100%,0) 100%);
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 9999;
+    -webkit-transform: translateY(-110vh);
+    transform: translateY(-110vh);
+    max-width: 100vw!important;
+    }
+  </style>
+
+  <body>
+    <div class="centri">
+      <div class="container">
+        <canvas id="myChart"></canvas>
+      </div>
+      <div class="light"></div>
+
+    </div>
+
+    <script>
+      let monthsx = [];
+      let money = [];
+      let bonus = [];
+      let status = [];
+      let moneyPlus = [];
+      let monthsPlus = [];
+      var singleMonths;
+      var lastSeen;
+      var sum = 0;
+      var values = [];
+
+      parseData(createGraph);
+
+      function parseData(createGraph) {
+        Papa.parse(
+          "https://raw.githubusercontent.com/LynxLead/comment-ranker/master/data.csv",
+          {
+            download: true,
+            complete: function (results) {
+              createGraph(results.data);
+            },
+          }
+        );
+      }
+
+      function createGraph(data) {
+        for (let i = 1; i < data.length; i++) {
+          money.push(data[i][1]);
+          bonus.push(data[i][2]);
+          monthsx.push(data[i][3]);
+          status.push(data[i][6]);
+        }
+
+        function* zip(...args) {
+          const len = args.reduce(({ length: a }, { length: b }) =>
+            a === undefined ? b : Math.min(a, b)
+          );
+          for (let i = 0; i < len; i++) {
+            yield [...args.map((arr) => arr[i])];
+          }
+        }
+
+        function toFloatLax(str) {
+          return parseFloat(str.replace(/[^0-9\./g]/, ""), 10);
+        }
+
+        const parsed = [...zip(money, bonus, monthsx, status)]
+          .filter(([, , , status]) => status === "APPROVED")
+          .map(([a, b, date, ...rest]) => [
+            toFloatLax(a) + toFloatLax(b),
+            new Date(date).getMonth(),
+            ...rest,
+          ]);
+
+        moneyPlus = [...zip(money, bonus, status)]
+          .filter(([, , status]) => status === "APPROVED")
+          .map(([a, b, ...rest]) => toFloatLax(a) + toFloatLax(b));
+
+        monthsPlus = [...zip(monthsx, status)]
+          .filter(([monthsx, status]) => status === "APPROVED")
+          .map(([date]) => new Date(date).getMonth());
+
+          singleMonths = [monthsPlus[0]];
+        lastSeen = monthsPlus[0];
+
+
+        for (let i = 0; i < monthsPlus.length; i++) {
+          if (monthsPlus[i] !== lastSeen) {
+            singleMonths.push(monthsPlus[i]);
+            values.push(sum);
+            sum = moneyPlus[i];
+            lastSeen = monthsPlus[i];
+          } else {
+            sum += moneyPlus[i];
+          }
+
+          if (i == monthsPlus.length - 1) {
+            values.push(sum);
+          }
+        }
+
+        console.log(singleMonths);
+        console.log(values);
+      }
+
+      setTimeout(function chartIt() {
+        let ctx = document.getElementById("myChart").getContext("2d");
+        let myChart = new Chart(ctx, {
+          type: "bar",
+          data: {
+            labels: singleMonths,
+            datasets: [
+              {
+                label: "Money",
+                data: values,
+                backgroundColor: "rgba(255, 99, 132, 0.2)",
+                borderColor: "rgba(255, 99, 132, 1)",
+                borderWidth: 1,
+              },
+            ],
+          },
+        });
+      }, 0);
+    </script>
+  </body>
+</html>
