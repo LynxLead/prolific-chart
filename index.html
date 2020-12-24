@@ -132,7 +132,9 @@
         console.log(singleMonths);
         console.log(values);
       }
-      document.addEventListener("DOMContentLoaded", ()=> { 
+    </script>
+
+    <script defer>
       setTimeout(function chartIt() {
         let ctx = document.getElementById("myChart").getContext("2d");
         let myChart = new Chart(ctx, {
@@ -151,8 +153,7 @@
           },
         });
       }, 0);
-      });
-
     </script>
+    
   </body>
 </html>
